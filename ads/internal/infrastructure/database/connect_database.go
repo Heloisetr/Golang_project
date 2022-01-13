@@ -10,7 +10,7 @@ import (
 )
 
 func ConnectToDatabase() *mongo.Client {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27045")
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27035")
 
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 

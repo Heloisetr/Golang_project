@@ -4,95 +4,135 @@ import (
 	"ads/domain"
 	"ads/internal/utils"
 	"context"
-	"log"
+	"encoding/json"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func Create(ctx context.Context, ad domain.Ad, client *mongo.Client) error {
-	collection := client.Database("GolangAd").Collection("ads")
+	collection := client.Database("GolangProject").Collection("ads")
+
+	//userID, errParse := utils.ParseToken(ad.UserID)
+
+	//if errParse != nil {
+	//	return errParse
+	//}
+
+	//ad.UserID = userID
 
 	_, err := collection.InsertOne(context.TODO(), ad)
 	if err != nil {
-		log.Fatal(err)
+		return domain.ErrCreate
 	}
 
 	return nil
 }
 
 func Get(ctx context.Context, adID string, client *mongo.Client) (domain.Ad, error) {
-	collection := client.Database("GolangAd").Collection("ads")
+	collection := client.Database("GolangProject").Collection("ads")
 
 	var result domain.Ad
 	err := collection.FindOne(context.TODO(), bson.M{"adid": adID}).Decode(&result)
 	if err != nil {
-		log.Fatal(err)
+		return domain.Ad{}, domain.ErrAdNotFound
 	}
 	return result, nil
 }
 
-func Delete(ctx context.Context, adID string, client *mongo.Client) error {
-	collection := client.Database("GolangAd").Collection("ads")
+func Delete(ctx context.Context, adID string, token string, client *mongo.Client) error {
+	collection := client.Database("GolangProject").Collection("ads")
 
-	_, err := collection.DeleteOne(context.TODO(), bson.M{"adid": adID})
+	userId, errParse := utils.ParseToken(token)
+
+	if errParse != nil {
+		return errParse
+	}
+
+	_, err := collection.DeleteOne(context.TODO(), bson.M{"adid": adID, "userid": userId})
 	if err != nil {
-		log.Fatal(err)
+		return domain.ErrCantDelete
 	}
 
 	return nil
 }
 
-func Update(ctx context.Context, adID string, ad domain.Ad, client *mongo.Client) (domain.Ad, error) {
-	collection := client.Database("GolangAd").Collection("ads")
+func Update(ctx context.Context, token string, adID string, ad domain.UpdateAd, client *mongo.Client) (domain.Ad, error) {
+	collection := client.Database("GolangProject").Collection("ads")
+
+	userID, errParse := utils.ParseToken(token)
+
+	if errParse != nil {
+		return domain.Ad{}, errParse
+	}
 
 	var result domain.Ad
 	errors := collection.FindOne(context.TODO(), bson.M{"adid": adID}).Decode(&result)
 	if errors != nil {
-		log.Fatal(errors)
+		return domain.Ad{}, domain.ErrAdNotFound
+	}
+
+	if result.UserID != userID {
+		return domain.Ad{}, domain.ErrUnauthorized
+	}
+
+	finalBody, errJson := json.Marshal(ad)
+
+	if errJson != nil {
+		return domain.Ad{}, errJson
+	}
+
+	var finalmapbody map[string]interface{}
+
+	if errJson = json.Unmarshal(finalBody, &finalmapbody); errJson != nil {
+		return domain.Ad{}, errJson
 	}
 
 	filter := bson.M{"adid": adID}
-	update := bson.D{
-		{"$set", bson.D{
-			{"title", utils.CheckEmptyString(result.Title, ad.Title)},
-			{"description", utils.CheckEmptyString(result.Description, ad.Description)},
-			{"price", utils.CheckEmptyNumber(result.Price, ad.Price)},
-			{"picture", utils.CheckEmptyPicture(result.Picture, ad.Picture)},
-		},
-		},
+
+	update := bson.M{
+		"$set": finalmapbody,
 	}
 
-	_, err := collection.UpdateOne(context.TODO(), filter, update)
-	if err != nil {
-		log.Fatal(err)
-	}
+	var resultUpdate domain.Ad
 
-	return result, nil
+	collection.FindOneAndUpdate(ctx, filter, update).Decode(&resultUpdate)
+
+	return resultUpdate, nil
 }
 
-func GetAll(ctx context.Context, userID string, client *mongo.Client) ([]*domain.Ad, error) {
-	collection := client.Database("GolangAd").Collection("ads")
+func GetAll(ctx context.Context, token string, userID string, client *mongo.Client) ([]*domain.Ad, error) {
+	collection := client.Database("GolangProject").Collection("ads")
 
 	var results []*domain.Ad
 
+	UserID, errParse := utils.ParseToken(token)
+
+	if errParse != nil {
+		return nil, errParse
+	}
+
+	if userID != UserID {
+		return nil, domain.ErrUnauthorized
+	}
+
 	cur, err := collection.Find(context.TODO(), bson.D{{"userid", userID}})
 	if err != nil {
-		log.Fatal(err)
+		return nil, domain.ErrAdNotFound
 	}
 
 	for cur.Next(context.TODO()) {
 		var elem domain.Ad
 		err := cur.Decode((&elem))
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		results = append(results, &elem)
 	}
 
 	if err := cur.Err(); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	cur.Close(context.TODO())
@@ -101,7 +141,7 @@ func GetAll(ctx context.Context, userID string, client *mongo.Client) ([]*domain
 }
 
 func GetByKeys(ctx context.Context, keyword string, client *mongo.Client) ([]*domain.Ad, error) {
-	collection := client.Database("GolangAd").Collection("ads")
+	collection := client.Database("GolangProject").Collection("ads")
 
 	var results []*domain.Ad
 
@@ -109,21 +149,21 @@ func GetByKeys(ctx context.Context, keyword string, client *mongo.Client) ([]*do
 
 	cur, err := collection.Find(context.TODO(), filter)
 	if err != nil {
-		log.Fatal(err)
+		return nil, domain.ErrAdNotFound
 	}
 
 	for cur.Next(context.TODO()) {
 		var elem domain.Ad
 		err := cur.Decode((&elem))
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		results = append(results, &elem)
 	}
 
 	if err := cur.Err(); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	cur.Close(context.TODO())

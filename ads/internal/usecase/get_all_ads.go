@@ -8,10 +8,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type GetAllAdCmd func(ctx context.Context, userID string) ([]*domain.Ad, error)
+type GetAllAdCmd func(ctx context.Context, token string, userID string) ([]*domain.Ad, error)
 
 func GetAllAd(client *mongo.Client) GetAllAdCmd {
-	return func(ctx context.Context, userID string) ([]*domain.Ad, error) {
-		return collection.GetAll(ctx, userID, client)
+	return func(ctx context.Context, token string, userID string) ([]*domain.Ad, error) {
+		return collection.GetAll(ctx, token, userID, client)
 	}
 }

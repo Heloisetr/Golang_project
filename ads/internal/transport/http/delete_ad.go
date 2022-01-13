@@ -17,16 +17,18 @@ func DeleteAdHandler(cmd usecase.DeleteAdCmd) gin.HandlerFunc {
 			return
 		}
 
-		err := cmd(c.Request.Context(), adID)
+		err := cmd(c.Request.Context(), c.GetString("token"), adID)
 		if err != nil {
 			switch {
-			case errors.Is(err, domain.ErrAdNotFound):
-				c.Status(http.StatusNotFound)
+			case errors.Is(err, domain.ErrTokenParsing):
+				c.JSON(http.StatusUnauthorized, gin.H{"message": domain.ErrTokenParsing.Error()})
+			case errors.Is(err, domain.ErrCantDelete):
+				c.JSON(http.StatusConflict, gin.H{"message": domain.ErrCantDelete})
 			default:
-				c.Status(http.StatusInternalServerError)
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Server Error"})
 			}
 			return
 		}
-		c.JSON(http.StatusOK, "Ad erased")
+		c.JSON(http.StatusOK, "Ad deleted")
 	}
 }

@@ -17,13 +17,17 @@ func GetAllsAdHandler(cmd usecase.GetAllAdCmd) gin.HandlerFunc {
 			return
 		}
 
-		ads, err := cmd(c.Request.Context(), userID)
+		ads, err := cmd(c.Request.Context(), c.GetString("token"), userID)
 		if err != nil {
 			switch {
 			case errors.Is(err, domain.ErrAdNotFound):
-				c.Status(http.StatusNotFound)
+				c.JSON(http.StatusNotFound, gin.H{"message": domain.ErrAdNotFound.Error()})
+			case errors.Is(err, domain.ErrUnauthorized):
+				c.JSON(http.StatusUnauthorized, gin.H{"message": domain.ErrUnauthorized.Error()})
+			case errors.Is(err, domain.ErrTokenParsing):
+				c.JSON(http.StatusBadRequest, gin.H{"message": domain.ErrTokenParsing.Error()})
 			default:
-				c.Status(http.StatusInternalServerError)
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Server Error"})
 			}
 			return
 		}

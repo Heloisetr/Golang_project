@@ -22,9 +22,9 @@ func GetByKeysAdHandler(cmd usecase.GetByKeysAdCmd) gin.HandlerFunc {
 		if err != nil {
 			switch {
 			case errors.Is(err, domain.ErrAdNotFound):
-				c.Status(http.StatusNotFound)
+				c.JSON(http.StatusNotFound, gin.H{"message": domain.ErrAdNotFound.Error()})
 			default:
-				c.Status(http.StatusInternalServerError)
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal Server Error"})
 			}
 			return
 		}

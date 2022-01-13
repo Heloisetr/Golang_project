@@ -17,11 +17,11 @@ import (
 )
 
 func initRoute(router *gin.Engine, client *mongo.Client) {
-	router.POST("/ad", http.CreateAdHandler(usecase.CreateAd(client)))
+	router.POST("/ad", http.AuthorizeMiddleware(), http.CreateAdHandler(usecase.CreateAd(client)))
 	router.GET("/ad/get/:ad_id", http.GetAdHandler(usecase.GetAd(client)))
-	router.DELETE("/ad/delete/:ad_id", http.DeleteAdHandler(usecase.DeleteAd(client)))
-	router.PATCH("/ad/update/:ad_id", http.UpdateAdHandler(usecase.UpdateAd(client)))
-	router.GET("/ad/get_all/:user_id", http.GetAllsAdHandler(usecase.GetAllAd(client)))
+	router.DELETE("/ad/delete/:ad_id", http.AuthorizeMiddleware(), http.DeleteAdHandler(usecase.DeleteAd(client)))
+	router.PATCH("/ad/update/:ad_id", http.AuthorizeMiddleware(), http.UpdateAdHandler(usecase.UpdateAd(client)))
+	router.GET("/ad/get_all/:user_id", http.AuthorizeMiddleware(), http.GetAllsAdHandler(usecase.GetAllAd(client)))
 	router.GET("/ad/get_by_keys/:keyword", http.GetByKeysAdHandler(usecase.GetByKeysAd(client)))
 	router.GET("/ping", func(c *gin.Context) { c.JSON(200, "pong") })
 }

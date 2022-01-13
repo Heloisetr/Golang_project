@@ -15,7 +15,7 @@ func AuthorizeMiddleware() gin.HandlerFunc {
 			c.Status(http.StatusUnauthorized)
 			c.Abort()
 		}
-		userID := tokenSplitted[1]
-		c.Set("user_id", userID)
+		accountID := tokenSplitted[1]
+		c.Set("token", accountID)
 	}
 }

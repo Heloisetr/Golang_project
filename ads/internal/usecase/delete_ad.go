@@ -7,10 +7,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type DeleteAdCmd func(ctx context.Context, adID string) error
+type DeleteAdCmd func(ctx context.Context, token string, adID string) error
 
 func DeleteAd(client *mongo.Client) DeleteAdCmd {
-	return func(ctx context.Context, adID string) error {
-		return collection.Delete(ctx, adID, client)
+	return func(ctx context.Context, token string, adID string) error {
+		return collection.Delete(ctx, adID, token, client)
 	}
 }
